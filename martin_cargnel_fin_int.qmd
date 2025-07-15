@@ -1,0 +1,420 @@
+---
+title: "Analisis de la hipótesis de desequilibrios gemelos para Argentina"
+
+subtitle: "Se utiliza el modelo de corrección de errores (VECM) para analizar las relaciones de largo plazo entre datos de la cuenta corriente, el déficit fiscal, la inversión y los términos de intercambio."
+author: "Martín Gabriel Cargnel"
+date: last-modified
+date-format: "MMM, YYYY"
+bibliography: references.bib
+csl: apa-6th-edition.csl
+link-citations: true
+lang: es
+execute:
+  echo: true
+  include: false
+  fig-align: center
+format:
+  pdf:
+    documentclass: scrreprt
+    toc-depth: 2
+    number-sections: true
+---
+
+```{python}
+import pandas as pd
+from statsmodels.tsa.stattools import adfuller
+from statsmodels.tsa.vector_ar.vecm import coint_johansen, VECM
+from global_macro_data import gmd
+```
+
+# Introducción
+
+Este trabajo profundiza el análisis de la hipótesis de los desequilibrios gemelos en Argentina realizado por [@Lanteri_2015], extendiendo el período de estudio hasta 2023 y utilizando datos internacionales de [@NBERw33714]. Se emplea el modelo de corrección de errores (VECM) para examinar las relaciones de largo plazo entre la cuenta corriente, el déficit fiscal, la inversión y el consumo.
+
+La hipótesis de los déficits gemelos, ampliamente debatida en la literatura, sostiene que existe una relación persistente entre el déficit fiscal y el déficit en cuenta corriente. Cuando el sector público incurre en déficit, este puede trasladarse al sector externo, generando un déficit en la balanza de pagos, especialmente si no es compensado por mayor ahorro privado o producción, lo que suele traducirse en un aumento de las importaciones y un deterioro del saldo externo.
+
+En economías emergentes como la argentina, la dinámica de los déficits gemelos es especialmente relevante por la restricción externa y la volatilidad de los flujos de capital. La relación entre ambos déficits puede ser bidireccional y estar influida por factores como la tasa de ahorro, la inversión, los términos de intercambio y la confianza de los inversores. Por ejemplo, un deterioro en los términos de intercambio puede agravar tanto el déficit fiscal como el externo.
+
+Comprender estos desequilibrios es fundamental para evaluar la sostenibilidad macroeconómica, ya que pueden derivar en crisis de balanza de pagos, depreciaciones cambiarias y ajustes fiscales abruptos. Por ello, resulta relevante analizar empíricamente la magnitud de esta relación en Argentina, considerando los cambios estructurales y de política económica entre 1993 y 2023.
+
+[@Lanteri_2015] analizó la hipótesis para Argentina con modelos VEC y datos trimestrales de 1993-2012, encontrando relaciones de largo plazo entre la cuenta corriente, el resultado fiscal primario, la inversión y los términos de intercambio. Sus resultados mostraron que tanto el déficit público como la inversión deterioran el saldo de la cuenta corriente, y que el resultado fiscal primario precede a la cuenta corriente y la inversión, validando la hipótesis keynesiana de los déficits gemelos.
+
+Este trabajo busca verificar si estos hallazgos se mantienen al incorporar nuevas variables, datos internacionales y un período de análisis más extenso.
+
+La estructura es la siguiente: la sección 2 resume la evolución de la economía argentina (1993-2023); la sección 3 describe los datos; la sección 4 detalla la metodología; la sección 5 presenta los resultados; y la sección 6 expone las conclusiones.
+
+# La economía argentina en el período 1993-2023
+
+Desde los años noventa, la economía argentina atravesó dos grandes etapas definidas por sus políticas económicas. Entre 1991 y 2001, el Plan de Convertibilidad instauró un tipo de cambio fijo y la libre convertibilidad con el dólar estadounidense (un peso por un dólar). Este período se caracterizó por la liberalización de la cuenta capital, una mayor apertura comercial, privatizaciones de empresas públicas y un fuerte aumento de la inversión en infraestructura. El endeudamiento externo creció considerablemente para financiar los desequilibrios de la cuenta corriente, aunque la inflación se redujo a niveles similares a los de países desarrollados.
+
+La convertibilidad finalizó abruptamente entre diciembre de 2001 y comienzos de 2002, tras la imposibilidad de cumplir con los compromisos de deuda externa. El peso dejó de ser convertible y se implementó la "pesificación asimétrica" de depósitos y deudas en dólares. Entre las causas de la crisis se destacan la dinámica insostenible de la deuda pública, la política fiscal de la segunda mitad de los noventa, la privatización del sistema previsional, la desaceleración económica, el alto desempleo, la crisis en Brasil, la suspensión del apoyo del FMI, el descalce de monedas en el sistema bancario y la sobrevaluación cambiaria.
+
+En 2002, la fuerte depreciación del peso permitió licuar deudas de empresas y familias, pero también provocó una significativa caída de salarios e ingresos en moneda local. Tras un breve período de flotación cambiaria, el Banco Central adoptó una política de mini devaluaciones periódicas, conocida como "flotación administrada".
+
+La etapa posterior a la convertibilidad se distinguió por una menor apertura financiera, un marcado crecimiento económico en los primeros años (sin el elevado endeudamiento externo de los noventa) y una recuperación de salarios y empleo, principalmente en el sector formal, aunque con tasas de inflación mucho más altas que en la década anterior.
+
+A diferencia de los noventa, caracterizados por ingresos netos de capital, tras la crisis de 2001 predominaron las salidas netas, aunque las reservas internacionales crecieron hasta 2010. A fines de 2011, la instauración del "cepo cambiario" restringió la compra de divisas para atesoramiento, encareció el turismo en el exterior y limitó el giro de utilidades, lo que redujo las reservas y amplió la brecha entre el tipo de cambio oficial y el paralelo.
+
+Los desequilibrios fiscales estuvieron presentes en ambos períodos. En los noventa, el déficit se vio impulsado por la privatización del sistema previsional. Tras la crisis de 2001, inicialmente se logró cierto equilibrio fiscal, pero a partir de 2011 el déficit resurgió, influido por el aumento de subsidios y del gasto corriente. Luego de la crisis de 2008, el financiamiento del Banco Central al Tesoro se intensificó, a diferencia de los noventa, cuando predominaban las ventas de activos y préstamos externos.
+
+El período 2015-2019 estuvo signado por un cambio de gobierno que impulsó la liberalización económica, eliminando el cepo cambiario y abriendo la cuenta capital. Sin embargo, estas medidas no lograron estabilizar la economía, que enfrentó nuevas crisis cambiarias y fiscales, con inflación elevada y un nuevo ciclo de endeudamiento externo.
+
+A partir de 2020, la pandemia de COVID-19 supuso un shock exógeno que impactó fuertemente en la economía. El gobierno adoptó medidas de contención social y económica que incrementaron el déficit fiscal, mientras que la cuenta corriente mejoró transitoriamente por la caída de importaciones y la recuperación de los precios de las materias primas. No obstante, entre 2022 y 2023, con la normalización de la actividad, resurgieron los desequilibrios externos y fiscales, agravados por la guerra en Ucrania y su impacto en los precios internacionales de los commodities.
+
+# Datos
+
+```{python}
+# cargamos los datos
+df = gmd(country=["ARG"])
+# Filtramos por Argentina y el período 1993-2023
+df_arg = df[df['countryname'] == 'Argentina']
+df_arg = df_arg[df_arg['year'] >= 1993]
+df_arg = df_arg[df_arg['year'] <= 2023]
+```
+
+Los datos con los que se trabajó vienen de la base de datos de macroeconomía internacional de [@NBERw33714]. En particular, se utilizaron las variables definidas en la Tabla @tbl-variables que se muestra a continuación.
+
+| Nombre de la variable  | Definición |Modelo|
+|----------------------|-----------------------|-----------------------|
+| Cuenta_Corriente | Saldo de Cuenta Corriente como % del PIB |1 y 2|
+| Resultado_Fiscal | Resultado Fiscal Primario como % del PIB |1 y 2|
+| Inversion | Formación Bruta de Capital Fijo como % del PIB |1 y 2|
+| Consumo | Consumo como % del PIB |2|
+: Tabla de elaboración propia que resume las variables utilizadas {#tbl-variables}
+
+
+Estas variables tienen una frecuencia anual, con registros desde 1993 hasta 2023.
+
+
+```{python}
+
+# Variables para el modelo 1 y 2
+vars_utilizadas = ['CA_GDP', 'govdef_GDP', 'finv_GDP','cons_GDP']
+df_model = df_arg[vars_utilizadas]
+df_model.columns = ['Cuenta_Corriente', 'Resultado_Fiscal', 'Inversion', 'Consumo']
+df_model.dropna(inplace=True)
+```
+
+# Estimación de modelos VECM
+```{python}
+# 5. Test de estacionariedad
+
+def test_stationarity(series, name):
+    """Test de estacionariedad usando el test de Dickey-Fuller"""
+    adf_result = adfuller(series.dropna())
+    is_stationary = adf_result[1] < 0.05
+    return {
+        'Variable': name,
+        'Estadístico ADF': round(adf_result[0], 4),
+        'p-value': round(adf_result[1], 4),
+        'Es estacionaria': is_stationary
+    }
+
+def run_stationarity_tests(df):
+    """Ejecuta tests de estacionariedad para múltiples variables y retorna un dataframe"""
+    results = []
+    for var in df.columns:
+        result = test_stationarity(df[var], var)
+        results.append(result)
+    return pd.DataFrame(results)
+
+
+def test_cointegration(model_name, df, det_order, k_ar_diff):
+    print(f"Test de cointegración para {model_name}...")
+    coint_test = coint_johansen(df, det_order=det_order, k_ar_diff=k_ar_diff)
+    print("-"*50)
+    print("Valores propios (Eigenvalues):", coint_test.eig)
+    print("Estadístico de traza (Trace statistic):", coint_test.lr1)
+    print("Valores críticos (90%, 95%, 99%):\n", coint_test.cvt)
+    print("-"*50)
+    print(f"¿Cointegración detectada? {'Sí' if coint_test.lr1[0] > coint_test.cvt[0, 1] else 'No'}")
+    print("-"*50)
+    return coint_test.lr1[0] > coint_test.cvt[0, 1]
+
+```
+
+Para analizar la hipótesis de desequilibrios gemelos, se utilizan dos modelos VECM que permiten capturar las relaciones de largo plazo entre las variables económicas. El VECM es apropiado cuando las series de tiempo son no estacionarias pero cointegradas, es decir, cuando existe una relación de equilibrio de largo plazo entre ellas.
+
+## Especificaciones de los modelos
+
+### Modelo 1
+El primer modelo especifica la relación entre la cuenta corriente como porcentaje del PIB ($CA_t$), el resultado fiscal primario como porcentaje del PIB ($FB_t$), y la formación bruta de capital fijo como porcentaje del PIB ($I_t$):
+
+$$
+\Delta Y_t = \alpha \beta' Y_{t-1} + \sum_{i=1}^{k-1} \Gamma_i \Delta Y_{t-i} + \mu + \varepsilon_t
+$$
+
+donde $Y_t = [CA_t, FB_t, I_t]'$ es el vector de variables endógenas, $\alpha$ es la matriz de velocidades de ajuste, $\beta$ es la matriz de vectores de cointegración, $\Gamma_i$ son las matrices de parámetros de corto plazo, $\mu$ es el término constante, y $\varepsilon_t$ es el vector de errores.
+
+La ecuación de cointegración de largo plazo se especifica como:
+
+$$CA_t = \beta_0 + \beta_1 FB_t + \beta_2 I_t + u_t$$
+
+donde se espera que $\beta_1 > 0$ (mejoras en el resultado fiscal primario mejoran la cuenta corriente) y $\beta_2 < 0$ (mayor inversión deteriora la cuenta corriente), validando así la hipótesis de desequilibrios gemelos.
+
+
+```{python}
+df_model_1 = df_model[['Cuenta_Corriente', 'Resultado_Fiscal', 'Inversion']]
+```
+
+
+### Modelo 2
+
+El segundo modelo expande el análisis incluyendo el consumo como porcentaje del PIB ($C_t$), manteniendo las variables del Modelo 1:
+
+$$
+\Delta Y_t = \alpha \beta' Y_{t-1} + \sum_{i=1}^{k-1} \Gamma_i \Delta Y_{t-i} + \mu + \varepsilon_t
+$$
+
+donde $Y_t = [CA_t, FB_t, I_t, C_t]'$.
+
+La ecuación de cointegración de largo plazo se especifica como:
+
+$$
+CA_t = \beta_0 + \beta_1 FB_t + \beta_2 I_t + \beta_3 C_t + u_t
+$$
+
+donde se espera que $\beta_1 > 0$ (mejoras en el resultado fiscal primario mejoran la cuenta corriente), $\beta_2 < 0$ (mayor inversión deteriora la cuenta corriente), y $\beta_3$ puede ser positivo o negativo dependiendo de si el consumo actúa como mecanismo de ajuste o como variable de control. Este modelo permite identificar el mecanismo de ajuste principal y explorar canales adicionales de transmisión.
+
+
+```{python}
+df_model_2 = df_model[['Cuenta_Corriente', 'Resultado_Fiscal', 'Inversion', 'Consumo']]
+```
+
+## Test de estacionariedad
+
+Los tests de estacionariedad se realizan para cada una de las variables. Que una serie sea estacionaria significa que su media y varianza son constantes en el tiempo y que su covarianza entre dos periodos es independiente del tiempo, para utilizar modelos VECM se espera que las variables no sean estacionarias. En este caso se utilizó el test de Dickey-Fuller aumentado (ADF) para determinar si las series son estacionarias.
+
+En la Tabla @tbl-estacionariedad se muestran los resultados de los tests de estacionariedad las variables utilizadas en ambos modelos viéndose que todas las variables son no estacionarias, algo muy importante para poder utilizar modelos VECM.
+
+```{python}
+#| label: tbl-estacionariedad
+#| tbl-cap: Estacionariedad de las variables utilizadas en los modelos
+#| echo: false
+#| include: true
+
+run_stationarity_tests(df_model)
+```
+
+
+## Test de cointegración
+Los test de cointegración se realizan para determinar si las variables son cointegradas, es decir, si existe una relación de equilibrio de largo plazo entre ellas. En este caso se utilizó el test de Johansen para determinar si las variables son cointegradas y se rechazó la hipótesis nula de no cointegración dado que el estadístico (38.807) es mayor al valor crítico (35.0116) al 95% de confianza.
+
+```{python}
+cointegrated1 = test_cointegration(model_name = "Modelo 1", df = df_model_1, det_order = 1, k_ar_diff = 1)
+```
+
+
+Para el modelo 2 se rechazó la hipótesis nula de no cointegración dado que el estadístico (72.0063) es mayor al valor crítico (55.2459) al 95% de confianza. Cabe destacar que para este modelo también se rechazó la hipótesis nula con un nivel de significancia del 1% (62.5202).
+
+```{python}
+cointegrated2 = test_cointegration(model_name = "Modelo 2", df = df_model_2, det_order = 1, k_ar_diff = 1)
+```
+
+# Resultados
+
+Los resultados de la estimación de los modelos VECM se presentan a continuación, analizando tanto los parámetros de cointegración como las relaciones de causalidad entre las variables.
+
+## Resultados del Modelo 1
+
+```{python}
+# Estimación del modelo VECM simplificado
+vecm_1 = VECM(df_model_1, k_ar_diff=1, coint_rank=1, deterministic='co')
+vecm_res_1 = vecm_1.fit()
+```
+
+
+### Parámetros de Ajuste (Alpha)
+
+Los resultados en la @tbl-alpha-model_1 muestran que las velocidades de ajuste asociadas a la Inversión (p-value = 0.0007) y al Resultado Fiscal (p-value = 0.0201) son estadísticamente significativas al 1% y 5%, respectivamente, mientras que la velocidad de ajuste de la Cuenta Corriente no resulta significativa (p-value = 0.5515). Esto indica que tanto la Inversión como el Resultado Fiscal presentan una tendencia sistemática a corregir los desvíos respecto al equilibrio de largo plazo, contribuyendo al proceso de ajuste dinámico entre las variables. Por el contrario, la Cuenta Corriente no muestra evidencia de ajuste significativo en el período analizado.
+
+```{python}
+#| label: tbl-alpha-model_1
+#| tbl-cap: Parámetros de Ajuste (Alpha) del Modelo 1
+#| echo: false
+#| include: true
+
+alpha_data_1 = {
+    "Variable": [],
+    "Estimate": [],
+    "p-value": []
+}
+
+for i, var in enumerate(df_model_1.columns):
+    alpha_data_1["Variable"].append(var)
+    alpha_data_1["Estimate"].append(round(vecm_res_1.alpha[i,0], 4))
+    alpha_data_1["p-value"].append(round(vecm_res_1.pvalues_alpha[i,0], 4))
+
+alpha_df_1 = pd.DataFrame(alpha_data_1).sort_values(by='Variable')
+alpha_df_1
+```
+
+
+### Vector de Cointegración (Beta)
+
+Como puede verse en la @tbl-beta-model_1, los resultados del vector de cointegración muestran que la Cuenta Corriente presenta un coeficiente normalizado de 1.0000 (p-value = 0.0000), lo que indica que es la variable de referencia en la relación de largo plazo y su estimación es altamente significativa. La Inversión tiene un coeficiente negativo y significativo (-4.1983, p-value = 0.0137), lo que sugiere que un aumento en la inversión está asociado a una disminución de la cuenta corriente en el equilibrio de largo plazo. Por otro lado, el Resultado Fiscal muestra un coeficiente positivo pero no significativo (0.3689, p-value = 0.7187), indicando que su relación con la cuenta corriente no es estadísticamente robusta en este modelo aunque el signo sea el esperado.
+
+```{python}
+#| label: tbl-beta-model_1
+#| tbl-cap: Vector de Cointegración (Beta) del Modelo 1
+#| echo: false
+#| include: true
+
+beta_data_1 = {
+    "Variable": [],
+    "Estimate": [],
+    "p-value": []
+}
+
+for i, var in enumerate(df_model_1.columns):
+    beta_data_1["Variable"].append(var)
+    beta_data_1["Estimate"].append(round(vecm_res_1.beta[i,0], 4))
+    beta_data_1["p-value"].append(round(vecm_res_1.pvalues_beta[i,0], 4))
+
+beta_df_1 = pd.DataFrame(beta_data_1).sort_values(by='Variable')
+beta_df_1
+```
+
+
+### Relaciones de Causalidad
+
+```{python}
+#| label: tbl-granger-model_1
+#| tbl-cap: Relaciones de Causalidad del Modelo 1
+#| echo: false
+#| include: true
+
+granger_data_1 = {
+    "Causante": [],
+    "Causado": [],
+    "Estadístico": [],
+    "p-value": []
+}
+
+for caused in df_model_1.columns:
+    for causing in df_model_1.columns:
+        if caused != causing:
+            result = vecm_res_1.test_granger_causality(caused=caused, causing=causing)
+            if result.pvalue < 0.05:
+                granger_data_1["Causante"].append(causing)
+                granger_data_1["Causado"].append(caused)
+                granger_data_1["p-value"].append(round(result.pvalue, 4))
+                granger_data_1["Estadístico"].append(round(result.test_statistic, 4))
+
+granger_df_1 = pd.DataFrame(granger_data_1).sort_values(by='p-value').reset_index(drop=True)
+granger_df_1
+```
+
+Finalmente, en la @tbl-granger-model_1 pueden encontrarse las pruebas de causalidad de Granger implementadas en el marco VECM revelan un patrón de relaciones causales significativas al nivel del 5%. Específicamente, se identifican tres relaciones causales estadísticamente significativas: el resultado fiscal primario precede a la cuenta corriente (p-value = 0.0068, estadístico = 5.4816), la inversión precede a la cuenta corriente (p-value = 0.0117, estadístico = 4.8405) y la cuenta corriente precede a la inversión (p-value = 0.0419, estadístico = 3.3666).
+
+Estos resultados proporcionan evidencia empírica sólida de que el resultado fiscal primario actúa como variable antecedente de la cuenta corriente, validando así la hipótesis keynesiana de los desequilibrios gemelos. Esta causalidad unidireccional desde el sector fiscal hacia el sector externo refuerza la noción de que los desequilibrios fiscales constituyen un determinante fundamental de los desequilibrios externos en la economía argentina. Además, se observa que la cuenta corriente precede temporalmente a la inversión, lo cual sugiere que los desequilibrios macroeconómicos ejercen una influencia significativa sobre las decisiones de inversión del sector privado.
+
+## Resultados del Modelo 2
+
+```{python}
+# Estimación del modelo VECM simplificado
+vecm_2 = VECM(df_model_2, k_ar_diff=1, coint_rank=1, deterministic='co')
+vecm_res_2 = vecm_2.fit()
+```
+
+
+### Parámetros de Ajuste (Alpha)
+
+Como puede verse en la @tbl-alpha-model2, presenta que solo la variable Consumo tiene una velocidad de ajuste estadísticamente significativa, con un coeficiente de -1.2195 y un p-value de 0.0000. Esto indica que el Consumo tiende a corregir de manera significativa los desvíos respecto al equilibrio de largo plazo. Por el contrario, las demás variables: Inversión (coeficiente: 0.1772, p-value: 0.4503), Cuenta Corriente (coeficiente: 0.1728, p-value: 0.6562) y Resultado Fiscal (coeficiente: 0.0506, p-value: 0.8637) no presentan velocidades de ajuste estadísticamente significativas, lo que sugiere que no contribuyen de manera relevante al proceso de convergencia hacia el equilibrio durante el período analizado.
+
+```{python}
+#| label: tbl-alpha-model2
+#| tbl-cap: Parámetros de Ajuste (Alpha) del Modelo 2
+#| echo: false
+#| include: true
+
+alpha_data_2 = {
+    "Variable": [],
+    "Estimate": [],
+    "p-value": []
+}
+
+for i, var in enumerate(df_model_2.columns):
+    alpha_data_2["Variable"].append(var)
+    alpha_data_2["Estimate"].append(round(vecm_res_2.alpha[i,0], 4))
+    alpha_data_2["p-value"].append(round(vecm_res_2.pvalues_alpha[i,0], 4))
+
+alpha_df_2 = pd.DataFrame(alpha_data_2).sort_values(by='Variable')
+alpha_df_2
+```
+
+
+### Vector de Cointegración (Beta)
+
+Siguiendo con los resultados de la @tbl-beta-model2, el análisis del vector de cointegración muestra que la mayoría de las variables presentan relaciones de largo plazo estadísticamente significativas. La Cuenta Corriente actúa como la variable normalizada (coeficiente 1.0000, p-value 0.0000), lo que implica que el resto de los coeficientes deben interpretarse en relación a ella. El Resultado Fiscal exhibe un coeficiente positivo de 0.3956, significativo al 1%, lo que indica que una mejora en el resultado fiscal (menor déficit o mayor superávit) se asocia con una mejora en la cuenta corriente, en línea con la hipótesis de los desequilibrios gemelos. 
+
+```{python}
+#| label: tbl-beta-model2
+#| tbl-cap: Vector de Cointegración (Beta) del Modelo 2
+#| echo: false
+#| include: true
+
+beta_data_2 = {
+    "Variable": [],
+    "Estimate": [],
+    "p-value": []
+}
+
+for i, var in enumerate(df_model_2.columns):
+    beta_data_2["Variable"].append(var)
+    beta_data_2["Estimate"].append(round(vecm_res_2.beta[i,0], 4))
+    beta_data_2["p-value"].append(round(vecm_res_2.pvalues_beta[i,0], 4))
+
+beta_df_2 = pd.DataFrame(beta_data_2).sort_values(by='Variable')
+beta_df_2
+```
+
+Por su parte, el Consumo también muestra un coeficiente positivo y significativo (1.0960, p-value 0.0000), sugiriendo que aumentos en el consumo están asociados a mejoras en la cuenta corriente en el largo plazo, lo cual puede estar reflejando una dinámica particular del período analizado o la composición del consumo agregado. En contraste, la Inversión presenta un coeficiente negativo (-0.1826) pero no significativo (p-value 0.1648), lo que indica que su relación con la cuenta corriente no es estadísticamente robusta en este modelo.
+
+### Relaciones de Causalidad
+
+Finalmente, en la @tbl-granger-model2 se observa que el Resultado Fiscal es un fuerte antecedente tanto del Consumo (p-value = 0.0005, estadístico = 8.6610) como de la Cuenta Corriente (p-value = 0.0068, estadístico = 5.4345) y de la Inversión (p-value = 0.0443, estadístico = 3.2837). Esto refuerza la hipótesis de que los desequilibrios fiscales tienen un rol central en la dinámica macroeconómica argentina, afectando tanto el sector externo como el gasto privado.
+
+```{python}
+#| label: tbl-granger-model2
+#| tbl-cap: Relaciones de Causalidad del Modelo 2
+#| echo: false
+#| include: true
+
+granger_data_2 = {
+    "Causante": [],
+    "Causado": [],
+    "Estadístico": [],
+    "p-value": []
+}
+
+for caused in df_model_2.columns:
+    for causing in df_model_2.columns:
+        if caused != causing:
+            result = vecm_res_2.test_granger_causality(caused=caused, causing=causing)
+            if result.pvalue < 0.05:
+                granger_data_2["Causante"].append(causing)
+                granger_data_2["Causado"].append(caused)
+                granger_data_2["p-value"].append(round(result.pvalue, 4))
+                granger_data_2["Estadístico"].append(round(result.test_statistic, 4))
+
+granger_df_2 = pd.DataFrame(granger_data_2).sort_values(by='p-value').reset_index(drop=True)
+granger_df_2
+```
+
+
+Por otro lado, la Inversión también precede significativamente al Consumo (p-value = 0.0226, estadístico = 4.0388) y a la Cuenta Corriente (p-value = 0.0422, estadístico = 3.3382), lo que sugiere que las decisiones de inversión impactan tanto en la demanda interna como en el saldo externo. Finalmente, se detecta que la Cuenta Corriente precede al Consumo (p-value = 0.0841, estadístico = 2.5809), indicando que la evolución del sector externo puede influir sobre el comportamiento del consumo agregado.
+
+En conjunto, estos resultados muestran un entramado causal más complejo y bidireccional que el esperado por la hipótesis tradicional de los desequilibrios gemelos, donde el sector fiscal no solo afecta a la cuenta corriente sino también a la inversión y el consumo, y donde la inversión y la cuenta corriente también ejercen efectos causales sobre otras variables clave de la economía.
+
+## Limitaciones y Direcciones Futuras
+
+Cabe destacar que el presente estudio presenta algunas limitaciones que deben ser consideradas al interpretar los resultados. El uso de datos anuales puede no capturar completamente la dinámica de corto plazo, lo que podría afectar la estimación de las relaciones de causalidad. La especificación del modelo podría mejorarse mediante la inclusión de variables adicionales como términos de intercambio, que han sido importantes en la dinámica macroeconómica argentina. Un análisis más detallado de subperíodos podría revelar cambios estructurales adicionales que no son capturados por el análisis del período completo.
+
+
+# Conclusión Final
+
+En conclusión, el análisis realizado evidencia la relevancia de los desequilibrios fiscales como motor central de la dinámica macroeconómica argentina, afectando tanto la cuenta corriente como el consumo y la inversión. Los resultados muestran relaciones causales complejas y bidireccionales entre las principales variables macroeconómicas, superando la visión tradicional de los desequilibrios gemelos. Si bien el modelo presenta limitaciones, como el uso de datos anuales y la posible omisión de variables relevantes, los hallazgos subrayan la importancia de políticas fiscales responsables y de un enfoque integral para comprender y abordar los desafíos macroeconómicos del país. Futuras investigaciones podrían profundizar en el análisis de subperíodos y la inclusión de nuevos determinantes para enriquecer la comprensión de estas dinámicas.
+
+
+# Referencias
