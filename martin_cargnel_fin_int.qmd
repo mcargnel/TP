@@ -5,8 +5,8 @@ subtitle: "Se utiliza el modelo de corrección de errores (VECM) para analizar l
 author: "Martín Gabriel Cargnel"
 date: last-modified
 date-format: "MMM, YYYY"
-bibliography: references.bib
-csl: apa-6th-edition.csl
+bibliography: referencias/references.bib
+csl: referencias/apa-6th-edition.csl
 link-citations: true
 lang: es
 execute:
